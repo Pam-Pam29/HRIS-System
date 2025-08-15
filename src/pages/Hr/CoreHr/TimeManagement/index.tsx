@@ -5,7 +5,8 @@ import { TypographyH2, TypographyH3 } from '../../../../components/ui/typography
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
-import { Clock, Users, CheckCircle, AlertTriangle, XCircle, Download, Filter, Calendar, User } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
+import { Clock, Users, CheckCircle, AlertTriangle, XCircle, Download, Filter, Calendar, User, Edit } from 'lucide-react';
 
 const mockAttendance = [
   { id: 1, employee: 'Jane Doe', date: '2025-07-21', clockIn: '09:00', clockOut: '17:00', status: 'Present' },
@@ -30,6 +31,15 @@ export default function TimeManagement() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
 
+  // Adjust popup state
+  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [selectedAttendance, setSelectedAttendance] = useState<any>(null);
+  const [adjustForm, setAdjustForm] = useState({
+    clockIn: '',
+    clockOut: '',
+    notes: ''
+  });
+
   // Filter logic
   const filtered = mockAttendance.filter(row =>
     (!selectedEmployee || row.employee === selectedEmployee) &&
@@ -42,6 +52,24 @@ export default function TimeManagement() {
     status,
     count: mockAttendance.filter(row => row.status === status).length,
   }));
+
+  const handleAdjust = (attendance: any) => {
+    setSelectedAttendance(attendance);
+    setAdjustForm({
+      clockIn: attendance.clockIn || '',
+      clockOut: attendance.clockOut || '',
+      notes: ''
+    });
+    setShowAdjustDialog(true);
+  };
+
+  const handleAdjustSubmit = () => {
+    // Here you would update the attendance record
+    console.log('Adjusting attendance:', selectedAttendance, adjustForm);
+    setShowAdjustDialog(false);
+    setSelectedAttendance(null);
+    setAdjustForm({ clockIn: '', clockOut: '', notes: '' });
+  };
 
   return (
     <div className="p-8 min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -62,70 +90,69 @@ export default function TimeManagement() {
 
       {/* Filters Section */}
       <Card className="mb-8 border-0 shadow-lg bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <TypographyH3 className="text-lg font-semibold">Filters & Controls</TypographyH3>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Employee</label>
-              <Select value={selectedEmployee || "all"} onValueChange={(value) => setSelectedEmployee(value === "all" ? null : value)}>
-                <SelectTrigger className="w-full">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Employee</label>
+              <Select value={selectedEmployee || ''} onValueChange={setSelectedEmployee}>
+                <SelectTrigger>
                   <SelectValue placeholder="All Employees" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {employees.map(emp => <SelectItem key={emp} value={emp}>{emp}</SelectItem>)}
+                  <SelectItem value="">All Employees</SelectItem>
+                  {employees.map(employee => (
+                    <SelectItem key={employee} value={employee}>{employee}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Status</label>
-              <Select value={selectedStatus || "all"} onValueChange={(value) => setSelectedStatus(value === "all" ? null : value)}>
-                <SelectTrigger className="w-full">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Status</label>
+              <Select value={selectedStatus || ''} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {statuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                  <SelectItem value="">All Statuses</SelectItem>
+                  {statuses.map(status => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Date</label>
-              <Input 
-                type="date" 
-                value={selectedDate} 
-                onChange={e => setSelectedDate(e.target.value)}
-                className="w-full"
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Date</label>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                placeholder="Select date"
               />
             </div>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white px-6">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+            <div className="flex items-end">
+              <Button variant="outline" className="w-full">
+                <Filter className="h-4 w-4 mr-2" />
+                Apply Filters
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {summary.map(s => {
-          const config = statusConfig[s.status as keyof typeof statusConfig];
-          const IconComponent = config.icon;
+        {summary.map(({ status, count }) => {
+          const config = statusConfig[status as keyof typeof statusConfig];
           return (
-            <Card key={s.status} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-card to-card/80">
+            <Card key={status} className="border-0 shadow-lg bg-card/50 backdrop-blur-sm">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">{s.status}</p>
-                    <p className="text-3xl font-bold text-foreground">{s.count}</p>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${config.color}`}>
+                    <config.icon className="h-6 w-6" />
                   </div>
-                  <div className={`p-3 rounded-full ${config.color}`}>
-                    <IconComponent className="h-6 w-6" />
+                  <div>
+                    <div className="text-2xl font-bold">{count}</div>
+                    <div className="text-sm text-muted-foreground">{status}</div>
                   </div>
                 </div>
               </CardContent>
@@ -156,74 +183,119 @@ export default function TimeManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-8 w-8 text-muted-foreground/50" />
-                        <p>No attendance records found</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((row, i) => {
-                    const config = statusConfig[row.status as keyof typeof statusConfig];
-                    return (
-                      <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-full">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <span className="font-medium">{row.employee}</span>
+                {filtered.map((row) => {
+                  const config = statusConfig[row.status as keyof typeof statusConfig];
+                  return (
+                    <tr key={row.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 text-muted-foreground" />
                           </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{row.date}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-mono">{row.clockIn || '-'}</td>
-                        <td className="px-4 py-3 font-mono">{row.clockOut || '-'}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={config.color}>
-                            {row.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button size="sm" variant="outline" className="hover:bg-violet-50 hover:border-violet-200 hover:text-violet-700">
+                          <span className="font-medium">{row.employee}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {row.date}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {row.clockIn || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {row.clockOut || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={config.color}>
+                          <config.icon className="h-3 w-3 mr-1" />
+                          {row.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAdjust(row)}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
                             Adjust
                           </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Footer Note */}
-      <Card className="mt-8 border-0 shadow-sm bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full mt-0.5">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+      {/* Adjust Time Dialog */}
+      <Dialog open={showAdjustDialog} onOpenChange={setShowAdjustDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Attendance Time</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Employee: {selectedAttendance?.employee}
+              </label>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                Date: {selectedAttendance?.date}
+              </label>
             </div>
             <div>
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                <strong>Note:</strong> This dashboard is for HR/admin use only.
-              </p>
-              <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
-                Employees do not access this view or adjust attendance records.
-              </p>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Clock In Time</label>
+              <Input
+                type="time"
+                value={adjustForm.clockIn}
+                onChange={(e) => setAdjustForm(prev => ({ ...prev, clockIn: e.target.value }))}
+                placeholder="09:00"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Clock Out Time</label>
+              <Input
+                type="time"
+                value={adjustForm.clockOut}
+                onChange={(e) => setAdjustForm(prev => ({ ...prev, clockOut: e.target.value }))}
+                placeholder="17:00"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Notes (Optional)</label>
+              <Input
+                value={adjustForm.notes}
+                onChange={(e) => setAdjustForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Reason for adjustment..."
+              />
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleAdjustSubmit} className="flex-1">
+                Save Changes
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowAdjustDialog(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

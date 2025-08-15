@@ -27,18 +27,19 @@ const navStructure = [
     heading: 'Hiring & Onboarding',
     links: [
       { label: 'Recruitment', href: '/Hr/Hiring/Recruitment', icon: UserPlus },
-      { label: 'Onboarding', href: '/Hr/Hiring/Onboarding', icon: ClipboardList },
+      // { label: 'Onboarding', href: '/Hr/Hiring/Onboarding', icon: ClipboardList },
       { label: 'Job Board', href: '/Hr/Hiring/JobBoard', icon: BookOpen },
     ],
   },
   {
     heading: 'Payroll',
     links: [
-      { label: 'Wallet', href: '/Hr/Payroll/Wallet', icon: Wallet },
-      { label: 'Salaries', href: '/Hr/Payroll/Salaries', icon: DollarSign },
-      { label: 'Benefit', href: '/Hr/Payroll/Benefit', icon: Gift },
-      { label: 'Pension', href: '/Hr/Payroll/Pension', icon: Shield },
-      { label: 'Tax', href: '/Hr/Payroll/Tax', icon: Percent },
+      { label: 'Payroll', href: '/Hr/Payroll/Payroll', icon: DollarSign },
+      // { label: 'Wallet', href: '/Hr/Payroll/Wallet', icon: Wallet },
+      // { label: 'Salaries', href: '/Hr/Payroll/Salaries', icon: DollarSign },
+      // { label: 'Benefit', href: '/Hr/Payroll/Benefit', icon: Gift },
+      // { label: 'Pension', href: '/Hr/Payroll/Pension', icon: Shield },
+      // { label: 'Tax', href: '/Hr/Payroll/Tax', icon: Percent },
     ],
   },
 ];
