@@ -169,23 +169,21 @@ export function Sidebar() {
 // SidebarNavLink: helper for nav links with icon, active state, and collapsed mode
 function SidebarNavLink({ link, isActive, collapsed }: { link: { label: string; href: string; icon: any }; isActive: boolean; collapsed?: boolean }) {
   return (
-    <li>
-      <NavigationMenuItem>
-        <a
-          href={link.href}
-          className={
-            `flex items-center gap-3 rounded-md font-medium transition-colors
-            ${collapsed ? 'justify-center w-10 h-10 p-0' : 'px-3 py-2 text-sm w-full'}
-            ${isActive ? 'bg-muted font-semibold' : 'hover:bg-muted'}
-            ${isActive ? 'text-primary' : 'text-foreground'}
-            `
-          }
-          title={collapsed ? link.label : undefined}
-        >
-          <link.icon className="w-5 h-5 text-muted-foreground" />
-          {!collapsed && link.label}
-        </a>
-      </NavigationMenuItem>
-    </li>
+    <NavigationMenuItem>
+      <a
+        href={link.href}
+        className={
+          `flex items-center gap-3 rounded-md font-medium transition-colors
+          ${collapsed ? 'justify-center w-10 h-10 p-0' : 'px-3 py-2 text-sm w-full'}
+          ${isActive ? 'bg-muted font-semibold' : 'hover:bg-muted'}
+          ${isActive ? 'text-primary' : 'text-foreground'}
+          `
+        }
+        title={collapsed ? link.label : undefined}
+      >
+        <link.icon className="w-5 h-5 text-muted-foreground" />
+        {!collapsed && link.label}
+      </a>
+    </NavigationMenuItem>
   );
 } 
