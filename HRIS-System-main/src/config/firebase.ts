@@ -17,6 +17,7 @@ let app: any = null;
 let db: any = null;
 let auth: any = null;
 let analytics: any = null;
+let firebaseInitialized = false;
 
 // Async function to initialize Firebase
 const initializeFirebase = async () => {
@@ -32,11 +33,13 @@ const initializeFirebase = async () => {
     auth = getAuth(app);
     analytics = getAnalytics(app);
     
+    firebaseInitialized = true;
     console.log('✅ Firebase initialized successfully');
     return true;
   } catch (error) {
     console.warn('⚠️ Firebase not available. Please install Firebase: npm install firebase');
     console.warn('⚠️ Falling back to Mock service');
+    firebaseInitialized = false;
     return false;
   }
 };
@@ -54,6 +57,7 @@ export const isFirebaseConfigured = () => {
          firebaseConfig.projectId && 
          firebaseConfig.apiKey !== "your-api-key" && 
          firebaseConfig.projectId !== "your-project-id" &&
+         firebaseInitialized &&
          db !== null;
 };
 

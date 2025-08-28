@@ -1,57 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { TypographyH2 } from '@/components/ui/typography';
-import { AtomicTanstackTable } from '@/components/TanstackTable/TanstackTable';
-import { ColumnDef } from '@tanstack/react-table';
-import { StatCard } from '@/components/molecules/StatCard';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { PlusCircle, Users, UserPlus, ArrowRightLeft, UserMinus } from 'lucide-react';
-import { EmployeeForm } from './components/EmployeeForm';
-import { EmployeeProfileDrawer } from './components/EmployeeProfileDrawer';
-import { EmployeeTableToolbar } from './components/EmployeeTableToolbar';
-import { StatCardsRow } from './components/StatCardsRow';
-import { Employee } from './types';
-import { employeeService } from '../../../../services/employeeService';
 
-// Comment out existing mock employees - now using service
-// const mockEmployees: Employee[] = [
-//   {
-//     id: 1,
-//     avatar: 'https://randomuser.me/api/portraits/women/1.jpg',
-//     name: "Jane Doe",
-//     email: "jane.doe@example.com",
-//     role: "Software Engineer",
-//     department: "Engineering",
-//     employmentType: "Full-time",
-//     status: "Active",
-//     dateStarted: "2022-01-15",
-//     phone: "555-123-4567",
-//     address: "123 Main St, Springfield",
-//     location: "Lagos",
-//     gender: "Female",
-//     dob: "1990-05-10",
-//     nationalId: "A123456789",
-//     manager: "John Smith",
-//     documents: [
-//       { name: "Offer Letter.pdf", url: "#" },
-//       { name: "ID Card.jpg", url: "#" }
-//     ],
-//     emergencyContact: {
-//       name: "Mary Doe",
-//       phone: "555-987-6543",
-//       relationship: "Mother"
-//     },
-//     notes: "Excellent performer."
-//   },
-//   // ... other employees commented out
-// ];
+interface Employee {
+  id: number;
+  avatar?: string;
+  name: string;
+  email?: string;
+  role: string;
+  department: string;
+  employmentType: string;
+  status: string;
+  dateStarted?: string;
+  phone?: string;
+  address?: string;
+  location?: string;
+  gender?: string;
+  dob?: string;
+  nationalId?: string;
+  manager?: string;
+  documents?: { name: string; url: string }[];
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  notes?: string;
+}
+
+// Simple mock service
+const mockEmployeeService = {
+  getEmployees: async (): Promise<Employee[]> => {
+    return Promise.resolve([]);
+  },
+  createEmployee: async (employee: Omit<Employee, 'id'>): Promise<Employee> => {
+    const newEmployee = { ...employee, id: Date.now() } as Employee;
+    return Promise.resolve(newEmployee);
+  },
+  updateEmployee: async (id: string, employee: Partial<Employee>): Promise<Employee> => {
+    return Promise.resolve({ id: parseInt(id), ...employee } as Employee);
+  },
+  deleteEmployee: async (id: string): Promise<boolean> => {
+    return Promise.resolve(true);
+  },
+  searchEmployees: async (query: string): Promise<Employee[]> => {
+    return Promise.resolve([]);
+  }
+};
 
 export default function EmployeeDirectory() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Form states
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    role: '',
+    department: ''
+  });
 
   // Load employees from service
   useEffect(() => {
@@ -61,7 +69,7 @@ export default function EmployeeDirectory() {
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const data = await employeeService.getEmployees();
+      const data = await mockEmployeeService.getEmployees();
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -70,198 +78,496 @@ export default function EmployeeDirectory() {
     }
   };
 
-  const handleAddEmployee = async (employeeData: Omit<Employee, 'id'>) => {
+  const handleAddEmployee = async () => {
     try {
-      const newEmployee = await employeeService.createEmployee(employeeData);
-      setEmployees(prev => [...prev, newEmployee]);
-      setShowAddDialog(false);
+      if (formData.name && formData.role && formData.department) {
+        const newEmployee = await mockEmployeeService.createEmployee({
+          ...formData,
+          employmentType: 'Full-time',
+          status: 'Active'
+        });
+        setEmployees(prev => [...prev, newEmployee]);
+        setShowAddDialog(false);
+        setFormData({ name: '', email: '', role: '', department: '' });
+      }
     } catch (error) {
       console.error('Error adding employee:', error);
     }
   };
 
-  const handleUpdateEmployee = async (id: string, employeeData: Partial<Employee>) => {
+  const handleUpdateEmployee = async () => {
     try {
-      const updatedEmployee = await employeeService.updateEmployee(id, employeeData);
-      setEmployees((prev: Employee[]) => prev.map(emp => emp.id.toString() === id ? updatedEmployee : emp));
-      setShowProfileDrawer(false);
-      setSelectedEmployee(null);
+      if (selectedEmployee && formData.name && formData.role && formData.department) {
+        const updatedEmployee = await mockEmployeeService.updateEmployee(selectedEmployee.id.toString(), formData);
+        setEmployees(prev => prev.map(emp => emp.id === selectedEmployee.id ? updatedEmployee : emp));
+        setShowEditDialog(false);
+        setSelectedEmployee(null);
+        setFormData({ name: '', email: '', role: '', department: '' });
+      }
     } catch (error) {
       console.error('Error updating employee:', error);
     }
   };
 
   const handleDeleteEmployee = async (id: string) => {
-    try {
-      const success = await employeeService.deleteEmployee(id);
-      if (success) {
-        setEmployees((prev: Employee[]) => prev.filter(emp => emp.id.toString() !== id));
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        const success = await mockEmployeeService.deleteEmployee(id);
+        if (success) {
+          setEmployees(prev => prev.filter(emp => emp.id.toString() !== id));
+        }
+      } catch (error) {
+        console.error('Error deleting employee:', error);
       }
-    } catch (error) {
-      console.error('Error deleting employee:', error);
     }
   };
 
-  const handleSearch = async (query: string) => {
-    if (!query.trim()) {
-      await loadEmployees();
-      return;
-    }
-    
-    try {
-      const results = await employeeService.searchEmployees(query);
-      setEmployees(results);
-    } catch (error) {
-      console.error('Error searching employees:', error);
-    }
+  const openEditDialog = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setFormData({
+      name: employee.name,
+      email: employee.email || '',
+      role: employee.role,
+      department: employee.department
+    });
+    setShowEditDialog(true);
   };
-
-  const columns: ColumnDef<Employee>[] = [
-    {
-      accessorKey: 'avatar',
-      header: 'Avatar',
-      cell: ({ row }) => (
-        <div className="flex items-center">
-          <img
-            src={row.original.avatar || 'https://via.placeholder.com/40'}
-            alt={row.original.name}
-            className="w-10 h-10 rounded-full"
-          />
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ row }) => (
-        <div className="font-medium">{row.original.name}</div>
-      ),
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => row.original.email || 'N/A',
-    },
-    {
-      accessorKey: 'role',
-      header: 'Role',
-      cell: ({ row }) => row.original.role,
-    },
-    {
-      accessorKey: 'department',
-      header: 'Department',
-      cell: ({ row }) => row.original.department,
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          row.original.status === 'Active' ? 'bg-green-100 text-green-800' :
-          row.original.status === 'On Leave' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-gray-100 text-gray-800'
-        }`}>
-          {row.original.status}
-        </span>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectedEmployee(row.original);
-              setShowProfileDrawer(true);
-            }}
-          >
-            View
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleDeleteEmployee(row.original.id.toString())}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
-  ];
 
   if (loading) {
     return (
-      <div className="p-8 min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="text-center">Loading employees...</div>
+      <div style={{ padding: '2rem', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
+        <div style={{ textAlign: 'center' }}>Loading employees...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div style={{ padding: '2rem', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
       {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <div style={{ padding: '0.5rem', backgroundColor: '#dbeafe', borderRadius: '0.5rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>👥</span>
           </div>
           <div>
-            <TypographyH2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            <h1 style={{ 
+              fontSize: '1.875rem', 
+              fontWeight: 'bold', 
+              background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: 0
+            }}>
               Employee Management
-            </TypographyH2>
-            <p className="text-muted-foreground text-sm">Manage your workforce efficiently</p>
+            </h1>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Manage your workforce efficiently</p>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <StatCardsRow employees={employees} />
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '1.5rem', 
+        marginBottom: '2rem' 
+      }}>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{employees.length}</div>
+          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Total Employees</div>
+        </div>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{employees.filter(e => e.status === 'Active').length}</div>
+          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Active Employees</div>
+        </div>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{employees.filter(e => e.status === 'On Leave').length}</div>
+          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>On Leave</div>
+        </div>
+        <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{new Set(employees.map(e => e.department)).size}</div>
+          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Departments</div>
+        </div>
+      </div>
 
       {/* Actions Bar */}
-      <div className="mb-8 flex justify-between items-center">
-        <EmployeeTableToolbar onSearch={handleSearch} />
-        <Button onClick={() => setShowAddDialog(true)}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add Employee
-        </Button>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '2rem' 
+      }}>
+        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+          Showing {employees.length} employees
+        </div>
+        <button
+          onClick={() => setShowAddDialog(true)}
+          style={{
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem'
+          }}
+        >
+          ➕ Add Employee
+        </button>
       </div>
 
       {/* Employee Table */}
-      <AtomicTanstackTable
-        data={employees}
-        columns={columns}
-        searchKey="name"
-        showPagination={true}
-        showSearch={false}
-      />
+      <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#f9fafb' }}>
+              <tr>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase' }}>
+                  Employee
+                </th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase' }}>
+                  Role
+                </th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase' }}>
+                  Department
+                </th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase' }}>
+                  Status
+                </th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '500', color: '#6b7280', textTransform: 'uppercase' }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '1rem 1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <img
+                        src={employee.avatar || 'https://via.placeholder.com/40'}
+                        alt={employee.name}
+                        style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', marginRight: '0.75rem' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '500' }}>{employee.name}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>{employee.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem' }}>
+                    {employee.role}
+                  </td>
+                  <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem' }}>
+                    {employee.department}
+                  </td>
+                  <td style={{ padding: '1rem 1.5rem' }}>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      backgroundColor: employee.status === 'Active' ? '#dcfce7' : '#fef3c7',
+                      color: employee.status === 'Active' ? '#166534' : '#92400e'
+                    }}>
+                      {employee.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem 1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => openEditDialog(employee)}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: '1px solid #d1d5db',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEmployee(employee.id.toString())}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: '1px solid #d1d5db',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Add Employee Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Employee</DialogTitle>
-          </DialogHeader>
-          <EmployeeForm
-            onSubmit={handleAddEmployee}
-            onCancel={() => setShowAddDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {showAddDialog && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            width: '100%',
+            maxWidth: '400px',
+            margin: '1rem'
+          }}>
+            <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: '600' }}>Add New Employee</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="Enter employee name"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="Enter email"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Role</label>
+                <input
+                  type="text"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="Enter role"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Department</label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                  placeholder="Enter department"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button
+                  onClick={handleAddEmployee}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Add Employee
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddDialog(false);
+                    setFormData({ name: '', email: '', role: '', department: '' });
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'transparent',
+                    border: '1px solid #d1d5db',
+                    padding: '0.5rem',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Employee Profile Drawer */}
-      {selectedEmployee && (
-        <EmployeeProfileDrawer
-          open={showProfileDrawer}
-          onClose={() => {
-            setShowProfileDrawer(false);
-            setSelectedEmployee(null);
-          }}
-          employee={selectedEmployee}
-          onUpdate={handleUpdateEmployee}
-        />
+      {/* Edit Employee Dialog */}
+      {showEditDialog && selectedEmployee && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '1.5rem',
+            borderRadius: '0.5rem',
+            width: '100%',
+            maxWidth: '400px',
+            margin: '1rem'
+          }}>
+            <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: '600' }}>Edit Employee</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Role</label>
+                <input
+                  type="text"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Department</label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button
+                  onClick={handleUpdateEmployee}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Update Employee
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    setSelectedEmployee(null);
+                    setFormData({ name: '', email: '', role: '', department: '' });
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'transparent',
+                    border: '1px solid #d1d5db',
+                    padding: '0.5rem',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
